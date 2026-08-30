@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f4ed">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Split Lah!">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="簡單分帳：記誰付、誰參與，最後自動算清楚。">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+<link rel="manifest" href="manifest.json">
+<title>Split Lah!</title>
+<style>
+:root{--bg:#f7f4ed;--paper:#fffdf8;--ink:#2d302d;--muted:#8b8d86;--line:#e5dfd2;--accent:#536f5b;--soft:#e8efe9;--warm:#f1eadc;--danger:#a65d54;--shadow:0 14px 40px rgba(61,58,49,.07)}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(#faf8f3,#f2eee6);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif}
+button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 14px 100px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.brand{font-weight:850;font-size:20px}.brand small{display:block;color:var(--muted);font-weight:400;font-size:11px;margin-top:3px}
+.btn{border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:10px 14px;border-radius:14px;cursor:pointer}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.danger{color:var(--danger)}
+.page{display:none}.page.active{display:block}.hero,.card{background:var(--paper);border:1px solid var(--line);border-radius:23px;padding:19px;box-shadow:var(--shadow)}.hero{background:linear-gradient(135deg,#fffdf8,#edf3ed)}h1,h2,h3{margin-top:0}.hero h1{margin-bottom:7px}.muted,.note{color:var(--muted)}.note{font-size:12px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.stat{background:rgba(255,253,248,.72);border:1px solid var(--line);border-radius:17px;padding:13px}.stat b{display:block;font-size:20px;margin-top:5px}
+.head{display:flex;justify-content:space-between;align-items:center;margin:22px 2px 10px}.list{display:grid;gap:9px}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:17px;padding:14px}.expense-row{cursor:pointer}.expense-row:hover{background:#fffaf1}.row small{display:block;color:var(--muted);margin-top:4px}.amount{font-weight:800;white-space:nowrap}.pill{background:var(--soft);color:var(--accent);padding:5px 8px;border-radius:999px;font-size:11px}
+.form{display:grid;gap:13px}.field label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px 3px}.input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:14px;background:#fffdf8;outline:none}.chips{display:flex;flex-wrap:wrap;gap:7px}.chip{border:1px solid var(--line);background:#fffdf8;border-radius:999px;padding:8px 11px;cursor:pointer}.chip.on{background:var(--soft);border-color:#c8d7ca;color:var(--accent)}
+.preview{background:var(--warm);padding:14px;border-radius:16px;line-height:1.7}.settle{padding:15px;border:1px dashed #cfc6b1;background:#fffaf0;border-radius:17px}.settle b{font-size:18px}.settle.paid{border-style:solid;background:#eef3ed;color:#657166}.settle-main{display:flex;justify-content:space-between;gap:12px;align-items:center}.settle-action{margin-top:11px;display:flex;justify-content:flex-end}.paid-mark{font-size:11px;padding:5px 8px;border-radius:999px;background:#dfeadf;color:#536f5b;font-weight:700}.settle-summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;padding:14px 15px;background:var(--paper);border:1px solid var(--line);border-radius:17px}.archive-note{margin-top:12px;padding:13px 14px;border-radius:16px;background:#e8efe9;color:#536f5b;font-size:12px;line-height:1.6}.empty{text-align:center;color:var(--muted);padding:28px 10px}
+.nav{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:min(870px,calc(100% - 20px));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px;background:rgba(247,244,237,.95);backdrop-filter:blur(15px);border:1px solid var(--line);border-radius:20px;z-index:20}.nav button{border:0;background:transparent;padding:9px 4px;border-radius:14px;color:#777269}.nav button.on{background:#3f413c;color:#fff}
+.modal{position:fixed;inset:0;background:rgba(30,30,27,.25);display:none;place-items:end center;z-index:50}.modal.open{display:grid}.sheet{width:min(600px,100%);background:var(--bg);border-radius:25px 25px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
+.person-line{display:grid;grid-template-columns:1fr auto;gap:8px}.setup-people{display:grid;gap:8px}.setup-person{display:grid;grid-template-columns:1fr auto;gap:8px}.x{border:0;background:transparent;color:var(--danger);font-size:18px}
+
+.install-tip{display:none;margin:0 0 14px;padding:12px 14px;border:1px solid #ded7c5;background:#fffaf0;border-radius:16px;font-size:12px;color:#6f6a60;line-height:1.6}
+.install-tip.show{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.install-tip button{border:0;background:#536f5b;color:white;border-radius:12px;padding:8px 11px;white-space:nowrap}
+.network{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:100;background:#3f413c;color:#fff;padding:7px 11px;border-radius:999px;font-size:11px;box-shadow:0 8px 24px rgba(0,0,0,.12);display:none}
+.network.show{display:block}
+@media(max-width:600px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}.hero{padding:18px}}
+</style>
+</head>
+<body>
+<div id="networkBanner" class="network">離線模式 · 資料仍會保存在這台手機</div>
+<div class="app">
+<div id="installTip" class="install-tip">
+  <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
+  <button id="installBtn">安裝</button>
+</div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.3</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+
+<section id="bills" class="page active">
+ <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
+ <div class="head"><h3>我的分帳</h3></div><div id="billList" class="list"></div>
+</section>
+
+<section id="bill" class="page">
+ <button class="btn" onclick="go('bills')">← 所有分帳</button>
+ <div id="billHero" class="hero" style="margin-top:12px"></div>
+ <div class="head"><h3>一起的人</h3><button class="btn" onclick="openPeople()">管理</button></div><div id="peopleView" class="chips"></div>
+ <div class="head"><h3>消費記錄</h3><button class="btn primary" onclick="openExpense()">＋ 加消費</button></div><div id="expenseList" class="list"></div>
+</section>
+
+<section id="settlement" class="page">
+ <div class="hero"><div class="muted">結算結果</div><h1>好了，數學交給我。</h1><div class="note">先計算每個人的實際負擔，再把債務合併成較少的轉帳。</div></div>
+ <div class="head"><h3>誰付給誰</h3></div><div id="settleList" class="list"></div>
+ <div id="settleControls"></div>
+ <div class="head"><h3>每個人的結果</h3></div><div id="balanceList" class="list"></div>
+</section>
+
+<section id="history" class="page">
+ <div class="head"><h2>記錄</h2></div><div id="historyList" class="list"></div>
+</section>
+</div>
+
+<nav class="nav">
+<button class="on" data-go="bills">帳單</button><button data-action="expense">＋ 消費</button><button data-go="settlement">結算</button><button data-go="history">記錄</button>
+</nav>
+
+<div id="newBillModal" class="modal"><div class="sheet"><h2>新分帳</h2><div class="form">
+ <div class="field"><label>這次叫什麼？</label><input id="newTitle" class="input" placeholder="曼谷旅行 / 晚餐 / 聚會"></div>
+ <div class="field"><label>貨幣</label><select id="newCurrency" class="input"><option value="RM">MYR · RM</option><option value="฿">THB · ฿</option><option value="$">USD · $</option><option value="¥">JPY · ¥</option></select></div>
+ <div class="field">
+   <label>這次一起的人</label>
+   <div id="setupPeople" class="setup-people"></div>
+   <button class="btn" type="button" style="margin-top:8px" onclick="addSetupPerson()">＋ 加一個人</button>
+ </div>
+ <div class="preview"><b>建立後就可以直接記消費。</b><br><span class="note">之後仍然可以在帳單內新增或管理參與者。</span></div>
+ <button class="btn primary" onclick="createBill()">建立並開始記帳</button><button class="btn" onclick="closeModal('newBillModal')">取消</button>
+</div></div></div>
+
+<div id="peopleModal" class="modal"><div class="sheet"><h2>參與者</h2><div id="peopleEditor" class="list"></div>
+ <div class="field" style="margin-top:12px"><label>加一個人</label><div class="person-line"><input id="personName" class="input" placeholder="名字"><button class="btn primary" onclick="addPerson()">加入</button></div></div>
+ <button class="btn" style="margin-top:14px;width:100%" onclick="closeModal('peopleModal')">完成</button>
+</div></div>
+
+<div id="expenseModal" class="modal"><div class="sheet"><h2 id="expenseModalTitle">加一筆消費</h2><div class="form">
+ <div class="field"><label>項目</label><input id="expTitle" class="input" placeholder="晚餐 / Grab / 咖啡"></div>
+ <div class="field"><label>金額</label><input id="expAmount" type="number" min="0" step="0.01" class="input" placeholder="0.00"></div>
+ <div class="field"><label>誰付款？</label><div id="payerChips" class="chips"></div></div>
+ <div class="field"><label>誰有參與？</label><div id="participantChips" class="chips"></div></div>
+ <div id="expensePreview" class="preview">輸入金額後，我會先幫你算每人多少。</div>
+ <button class="btn primary" id="expenseSaveBtn" onclick="saveExpense()">保存消費</button><button class="btn danger" id="expenseDeleteBtn" style="display:none" onclick="deleteEditingExpense()">刪除這筆消費</button><button class="btn" onclick="closeModal('expenseModal')">取消</button>
+ </div></div></div>
+
+<script>
+const KEY='splitBillMvpV1';
+let state=JSON.parse(localStorage.getItem(KEY)||'null')||{bills:[],current:null};
+let draftPayer=null,draftParticipants=new Set(),editingExpenseId=null,setupPeople=[];
+
+// Add settlement fields when opening data created by an older version.
+function migrateState(){state.bills.forEach(b=>{if(!b.paymentStatus||typeof b.paymentStatus!=='object')b.paymentStatus={};if(typeof b.settled!=='boolean')b.settled=false;});}
+migrateState();
+
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function current(){return state.bills.find(b=>b.id===state.current)}
+function money(n,b=current()){return `${b?.currency||'RM'} ${Number(n||0).toFixed(2)}`}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function go(id){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.nav [data-go]').forEach(x=>x.classList.toggle('on',x.dataset.go===id));
+ if(id==='bills')renderBills(); if(id==='bill')renderBill(); if(id==='settlement')renderSettlement(); if(id==='history')renderHistory();
+ window.scrollTo(0,0);
+}
+document.querySelectorAll('[data-go]').forEach(x=>x.onclick=()=>{if((x.dataset.go==='settlement')&&!current())return go('bills');go(x.dataset.go)});
+document.querySelector('[data-action="expense"]').onclick=()=>current()?openExpense():openNewBill();
+
+// Open the new-bill setup with two participant rows ready to fill.
+function openNewBill(){
+ document.getElementById('newTitle').value='';
+ setupPeople=['',''];
+ renderSetupPeople();
+ document.getElementById('newBillModal').classList.add('open');
+}
+
+// Add one more participant field while creating a bill.
+function addSetupPerson(){
+ setupPeople.push('');
+ renderSetupPeople();
+}
+
+// Remove one participant field from the new-bill setup.
+function removeSetupPerson(index){
+ setupPeople.splice(index,1);
+ if(!setupPeople.length) setupPeople.push('');
+ renderSetupPeople();
+}
+
+// Render participant name inputs for the new-bill setup.
+function renderSetupPeople(){
+ const el=document.getElementById('setupPeople');
+ el.innerHTML=setupPeople.map((name,index)=>`
+   <div class="setup-person">
+     <input class="input" value="${esc(name)}" placeholder="${index===0?'例如：Chen':'名字'}" oninput="updateSetupPerson(${index},this.value)">
+     <button class="x" type="button" onclick="removeSetupPerson(${index})">×</button>
+   </div>`).join('');
+}
+
+// Keep the temporary participant list in sync with the setup inputs.
+function updateSetupPerson(index,value){
+ setupPeople[index]=value;
+}
+
+// Create a bill and its initial participants in one step.
+function createBill(){
+ const title=document.getElementById('newTitle').value.trim();
+ if(!title)return alert('先給這次分帳一個名字。');
+
+ const names=setupPeople.map(x=>x.trim()).filter(Boolean);
+ if(!names.length)return alert('至少先加一個參與者。');
+
+ const uniqueNames=[];
+ for(const name of names){
+   if(!uniqueNames.some(x=>x.toLowerCase()===name.toLowerCase())) uniqueNames.push(name);
+ }
+
+ const bill={
+   id:uid(),
+   title,
+   currency:document.getElementById('newCurrency').value,
+   people:uniqueNames.map(name=>({id:uid(),name})),
+   expenses:[],
+   paymentStatus:{},
+   settled:false,
+   createdAt:Date.now()
+ };
+
+ state.bills.unshift(bill);
+ state.current=bill.id;
+ save();
+ closeModal('newBillModal');
+ renderAll();
+ go('bill');
+}
+function selectBill(id){state.current=id;save();go('bill')}
+
+function openPeople(){if(!current())return;renderPeopleEditor();document.getElementById('peopleModal').classList.add('open')}
+function addPerson(){
+ const name=document.getElementById('personName').value.trim();if(!name)return;
+ current().people.push({id:uid(),name});document.getElementById('personName').value='';save();renderPeopleEditor();renderBill();
+}
+function removePerson(id){
+ const b=current();if(b.expenses.some(e=>e.payer===id||e.participants.includes(id)))return alert('這個人已經出現在消費裡，先不要刪除。');
+ b.people=b.people.filter(p=>p.id!==id);save();renderPeopleEditor();renderBill();
+}
+function renderPeopleEditor(){
+ const b=current();document.getElementById('peopleEditor').innerHTML=b.people.length?b.people.map(p=>`<div class="row"><b>${esc(p.name)}</b><button class="x" onclick="removePerson('${p.id}')">×</button></div>`).join(''):'<div class="empty">還沒有人。先把一起分帳的人加進來。</div>';
+}
+
+// Open the expense sheet for a brand-new expense.
+function openExpense(){
+ const b=current();if(!b)return openNewBill();if(!b.people.length){alert('先加入參與者。');return openPeople()}
+ editingExpenseId=null;
+ document.getElementById('expenseModalTitle').textContent='加一筆消費';
+ document.getElementById('expenseSaveBtn').textContent='保存消費';
+ document.getElementById('expenseDeleteBtn').style.display='none';
+ document.getElementById('expTitle').value='';
+ document.getElementById('expAmount').value='';
+ draftPayer=b.people[0].id;
+ draftParticipants=new Set(b.people.map(p=>p.id));
+ renderExpenseChips();updatePreview();
+ document.getElementById('expenseModal').classList.add('open');
+}
+
+// Open the same expense sheet with an existing expense loaded for editing.
+function editExpense(id){
+ const b=current(),e=b?.expenses.find(x=>x.id===id);if(!b||!e)return;
+ editingExpenseId=id;
+ document.getElementById('expenseModalTitle').textContent='編輯消費';
+ document.getElementById('expenseSaveBtn').textContent='保存修改';
+ document.getElementById('expenseDeleteBtn').style.display='block';
+ document.getElementById('expTitle').value=e.title;
+ document.getElementById('expAmount').value=e.amount;
+ draftPayer=e.payer;
+ draftParticipants=new Set(e.participants);
+ renderExpenseChips();updatePreview();
+ document.getElementById('expenseModal').classList.add('open');
+}
+function renderExpenseChips(){
+ const b=current();
+ document.getElementById('payerChips').innerHTML=b.people.map(p=>`<button class="chip ${draftPayer===p.id?'on':''}" onclick="pickPayer('${p.id}')">${esc(p.name)}</button>`).join('');
+ document.getElementById('participantChips').innerHTML=b.people.map(p=>`<button class="chip ${draftParticipants.has(p.id)?'on':''}" onclick="toggleParticipant('${p.id}')">${esc(p.name)}</button>`).join('');
+}
+function pickPayer(id){draftPayer=id;renderExpenseChips();updatePreview()}
+function toggleParticipant(id){draftParticipants.has(id)?draftParticipants.delete(id):draftParticipants.add(id);renderExpenseChips();updatePreview()}
+document.getElementById('expAmount').addEventListener('input',updatePreview);
+function updatePreview(){
+ const b=current(),a=Number(document.getElementById('expAmount').value||0),n=draftParticipants.size;
+ document.getElementById('expensePreview').innerHTML=n&&a?`${money(a,b)} ÷ ${n} 人 = <b>每人 ${money(a/n,b)}</b>`:'選好參與者並輸入金額，我會先算給你看。';
+}
+// Save a new expense or update the expense currently being edited.
+function saveExpense(){
+ const b=current(),title=document.getElementById('expTitle').value.trim()||'未命名消費',amount=Number(document.getElementById('expAmount').value);
+ if(!(amount>0))return alert('金額要大於 0。');
+ if(!draftPayer)return alert('請選付款人。');
+ if(!draftParticipants.size)return alert('至少要有一位參與者。');
+ if(editingExpenseId){
+   const e=b.expenses.find(x=>x.id===editingExpenseId);
+   if(e){e.title=title;e.amount=amount;e.payer=draftPayer;e.participants=[...draftParticipants];e.updatedAt=Date.now();}
+ }else{
+   b.expenses.unshift({id:uid(),title,amount,payer:draftPayer,participants:[...draftParticipants],createdAt:Date.now()});
+ }
+ b.paymentStatus={};b.settled=false;save();editingExpenseId=null;closeModal('expenseModal');renderAll();go('bill');
+}
+
+// Delete the expense currently open in the edit sheet.
+function deleteEditingExpense(){
+ if(!editingExpenseId)return;
+ if(!confirm('刪除這筆消費？'))return;
+ const b=current();
+ b.expenses=b.expenses.filter(e=>e.id!==editingExpenseId);
+ b.paymentStatus={};b.settled=false;editingExpenseId=null;save();closeModal('expenseModal');renderAll();go('bill');
+}
+
+function calc(b){
+ const bal=Object.fromEntries(b.people.map(p=>[p.id,0]));
+ for(const e of b.expenses){if(!(e.payer in bal)||!e.participants.length)continue;bal[e.payer]+=e.amount;const share=e.amount/e.participants.length;e.participants.forEach(id=>{if(id in bal)bal[id]-=share})}
+ const creditors=Object.entries(bal).filter(([,v])=>v>.005).map(([id,v])=>({id,v})).sort((a,z)=>z.v-a.v);
+ const debtors=Object.entries(bal).filter(([,v])=>v<-.005).map(([id,v])=>({id,v:-v})).sort((a,z)=>z.v-a.v);
+ const tx=[];let i=0,j=0;
+ while(i<debtors.length&&j<creditors.length){const a=Math.min(debtors[i].v,creditors[j].v);tx.push({from:debtors[i].id,to:creditors[j].id,amount:a});debtors[i].v-=a;creditors[j].v-=a;if(debtors[i].v<.005)i++;if(creditors[j].v<.005)j++}
+ return {bal,tx};
+}
+// Build a stable key for one calculated settlement transfer.
+function settlementKey(tx){return `${tx.from}|${tx.to}|${Number(tx.amount).toFixed(2)}`;}
+
+// Return whether one calculated settlement transfer is marked paid.
+function isTransferPaid(b,tx){b.paymentStatus=b.paymentStatus||{};return b.paymentStatus[settlementKey(tx)]===true;}
+
+// Toggle one transfer between paid and unpaid.
+function toggleTransferPaid(key){const b=current();if(!b)return;b.paymentStatus=b.paymentStatus||{};b.paymentStatus[key]=!b.paymentStatus[key];refreshSettledState(b);save();renderAll();renderSettlement();}
+
+// Mark every currently calculated transfer as paid.
+function markAllSettled(){const b=current();if(!b)return;const {tx}=calc(b);b.paymentStatus=b.paymentStatus||{};tx.forEach(t=>b.paymentStatus[settlementKey(t)]=true);refreshSettledState(b);save();renderAll();renderSettlement();}
+
+// Reopen a settled bill by clearing payment checkmarks.
+function reopenSettlement(){const b=current();if(!b)return;b.paymentStatus={};b.settled=false;save();renderAll();renderSettlement();}
+
+// Derive the whole bill settlement state from current transfers.
+function refreshSettledState(b){const {tx}=calc(b);b.paymentStatus=b.paymentStatus||{};b.settled=tx.length===0||tx.every(t=>b.paymentStatus[settlementKey(t)]===true);}
+
+function nameOf(b,id){return b.people.find(p=>p.id===id)?.name||'未知'}
+
+// Render active bills first and settled bills underneath.
+function renderBills(){const el=document.getElementById('billList'),bills=[...state.bills].sort((a,b)=>Number(a.settled)-Number(b.settled)||b.createdAt-a.createdAt);el.innerHTML=bills.length?bills.map(b=>{const total=b.expenses.reduce((s,e)=>s+e.amount,0);return `<div class="row" onclick="selectBill('${b.id}')" style="${b.settled?'opacity:.68':''}"><div><b>${esc(b.title)}</b><small>${b.people.length} 人 · ${b.expenses.length} 筆消費</small></div><div style="text-align:right"><div class="amount">${money(total,b)}</div><span class="pill">${b.settled?'✓ 已結清':'進行中'}</span></div></div>`}).join(''):'<div class="empty">還沒有分帳。<br>按右上角「＋ 新分帳」開始。</div>';}
+function renderBill(){
+ const b=current();if(!b)return;
+ const total=b.expenses.reduce((s,e)=>s+e.amount,0);
+ document.getElementById('billHero').innerHTML=`<div class="muted">目前帳單</div><h1>${esc(b.title)}</h1><div class="stats"><div class="stat"><small>總支出</small><b>${money(total,b)}</b></div><div class="stat"><small>參與者</small><b>${b.people.length} 人</b></div><div class="stat"><small>消費</small><b>${b.expenses.length} 筆</b></div></div>`;
+ document.getElementById('peopleView').innerHTML=b.people.length?b.people.map(p=>`<span class="chip on">${esc(p.name)}</span>`).join(''):'<span class="note">還沒有人</span>';
+ document.getElementById('expenseList').innerHTML=b.expenses.length?b.expenses.map(e=>`<div class="row expense-row" onclick="editExpense('${e.id}')"><div><b>${esc(e.title)}</b><small>${esc(nameOf(b,e.payer))} 付款 · ${e.participants.map(id=>esc(nameOf(b,id))).join(' / ')}</small></div><div style="text-align:right"><div class="amount">${money(e.amount,b)}</div><small>點擊編輯 ›</small></div></div>`).join(''):'<div class="empty">還沒有消費。<br>加第一筆就開始了。</div>';
+}
+// Render settlement transfers, payment progress, and final balances.
+function renderSettlement(){
+ const b=current(),out=document.getElementById('settleList'),controls=document.getElementById('settleControls'),balances=document.getElementById('balanceList');if(!b)return;
+ const {bal,tx}=calc(b);b.paymentStatus=b.paymentStatus||{};
+ if(tx.length){
+   out.innerHTML=tx.map(t=>{const key=settlementKey(t),paid=isTransferPaid(b,t);return `<div class="settle ${paid?'paid':''}"><div class="settle-main"><div>${esc(nameOf(b,t.from))} → <b>${esc(nameOf(b,t.to))}　${money(t.amount,b)}</b></div>${paid?'<span class="paid-mark">✓ 已付</span>':''}</div><div class="settle-action"><button class="btn ${paid?'':'primary'}" onclick="toggleTransferPaid('${key}')">${paid?'撤銷已付':'標記已付'}</button></div></div>`}).join('');
+   const paidCount=tx.filter(t=>isTransferPaid(b,t)).length;refreshSettledState(b);
+   controls.innerHTML=b.settled?`<div class="archive-note"><b>✓ 這張帳單已全部結清。</b><br>它會在記錄裡顯示為「已結清」。</div><button class="btn" style="width:100%;margin-top:10px" onclick="reopenSettlement()">重新打開結算</button>`:`<div class="settle-summary"><div><b>${paidCount} / ${tx.length} 筆已付</b><div class="note">可以一筆一筆確認，也可以直接全部結清。</div></div><button class="btn primary" onclick="markAllSettled()">全部結清 ✓</button></div>`;
+ }else{b.settled=true;out.innerHTML='<div class="empty">目前沒有需要互相轉帳的金額。✓</div>';controls.innerHTML='<div class="archive-note">這張帳單目前沒有未結清款項。</div>';}
+ balances.innerHTML=b.people.map(p=>{const v=bal[p.id]||0;return `<div class="row"><b>${esc(p.name)}</b><span class="${Math.abs(v)<.005?'pill':'amount'}">${Math.abs(v)<.005?'剛剛好':v>0?'應收 '+money(v,b):'應付 '+money(-v,b)}</span></div>`}).join('');
+ save();
+}
+// Render current and settled bills in history.
+function renderHistory(){document.getElementById('historyList').innerHTML=state.bills.length?[...state.bills].sort((a,b)=>b.createdAt-a.createdAt).map(b=>`<div class="row" onclick="selectBill('${b.id}')" style="${b.settled?'opacity:.72':''}"><div><b>${esc(b.title)}</b><small>${new Date(b.createdAt).toLocaleDateString()} · ${b.expenses.length} 筆消費</small></div><span class="pill">${b.settled?'✓ 已結清':'進行中'}</span></div>`).join(''):'<div class="empty">還沒有記錄。</div>';}
+function renderAll(){renderBills();if(current())renderBill();renderHistory()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+// Seed a useful first-run demo so the app is immediately understandable.
+if(!state.bills.length){
+ const p1={id:uid(),name:'Chen'},p2={id:uid(),name:'寶寶'},p3={id:uid(),name:'A'};
+ const demo={id:uid(),title:'示範 · 晚餐',currency:'RM',people:[p1,p2,p3],expenses:[],paymentStatus:{},settled:false,createdAt:Date.now()};
+ demo.expenses=[{id:uid(),title:'晚餐',amount:180,payer:p1.id,participants:[p1.id,p2.id,p3.id],createdAt:Date.now()}];
+ state.bills=[demo];state.current=demo.id;save();
+}
+renderAll();
+
+// Register the service worker so the app shell can open offline after the first successful visit.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+// Show a lightweight offline indicator without blocking normal use.
+function updateNetworkState(){
+  const banner=document.getElementById('networkBanner');
+  banner.classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online',updateNetworkState);
+window.addEventListener('offline',updateNetworkState);
+updateNetworkState();
+
+// Offer native installation on supported browsers; on iPhone, explain the Share → Add to Home Screen route.
+let deferredInstallPrompt=null;
+const installTip=document.getElementById('installTip');
+const installBtn=document.getElementById('installBtn');
+const installText=document.getElementById('installText');
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+
+if(!isStandalone){
+  if(isIOS){
+    installTip.classList.add('show');
+    installText.textContent='iPhone：Safari 開啟後，按「分享」→「加入主畫面」，就會像 App 一樣開啟。';
+    installBtn.style.display='none';
+  }
+}
+
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  installTip.classList.add('show');
+  installText.textContent='可以把 Split Lah! 安裝到主畫面。';
+  installBtn.style.display='block';
+});
+
+installBtn.addEventListener('click',async()=>{
+  if(!deferredInstallPrompt)return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt=null;
+  installTip.classList.remove('show');
+});
+
+window.addEventListener('appinstalled',()=>installTip.classList.remove('show'));
+
+</script></body></html>
