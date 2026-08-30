@@ -43,7 +43,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
   <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
   <button id="installBtn">安裝</button>
 </div>
-<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.3</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.4</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
 
 <section id="bills" class="page active">
  <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
@@ -51,7 +51,10 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
 </section>
 
 <section id="bill" class="page">
- <button class="btn" onclick="go('bills')">← 所有分帳</button>
+ <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+   <button class="btn" onclick="go('bills')">← 所有分帳</button>
+   <button class="btn" onclick="openBillMenu()">•••</button>
+ </div>
  <div id="billHero" class="hero" style="margin-top:12px"></div>
  <div class="head"><h3>一起的人</h3><button class="btn" onclick="openPeople()">管理</button></div><div id="peopleView" class="chips"></div>
  <div class="head"><h3>消費記錄</h3><button class="btn primary" onclick="openExpense()">＋ 加消費</button></div><div id="expenseList" class="list"></div>
@@ -72,6 +75,14 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
 <nav class="nav">
 <button class="on" data-go="bills">帳單</button><button data-action="expense">＋ 消費</button><button data-go="settlement">結算</button><button data-go="history">記錄</button>
 </nav>
+
+
+<div id="billMenuModal" class="modal"><div class="sheet">
+  <h2>帳單設定</h2>
+  <div id="billMenuName" class="preview" style="margin-bottom:14px"></div>
+  <button class="btn danger" style="width:100%;margin-bottom:10px" onclick="confirmDeleteBill()">刪除這張帳單</button>
+  <button class="btn" style="width:100%" onclick="closeModal('billMenuModal')">取消</button>
+</div></div>
 
 <div id="newBillModal" class="modal"><div class="sheet"><h2>新分帳</h2><div class="form">
  <div class="field"><label>這次叫什麼？</label><input id="newTitle" class="input" placeholder="曼谷旅行 / 晚餐 / 聚會"></div>
@@ -190,6 +201,28 @@ function createBill(){
  go('bill');
 }
 function selectBill(id){state.current=id;save();go('bill')}
+
+// Open the bill settings sheet for the currently selected bill.
+function openBillMenu(){
+ const b=current();if(!b)return;
+ document.getElementById('billMenuName').innerHTML=`<b>${esc(b.title)}</b><br><span class="note">${b.people.length} 人 · ${b.expenses.length} 筆消費</span>`;
+ document.getElementById('billMenuModal').classList.add('open');
+}
+
+// Permanently delete the current bill after a second confirmation.
+function confirmDeleteBill(){
+ const b=current();if(!b)return;
+ const ok=confirm(`確定要刪除「${b.title}」？\n\n這張帳單裡的參與者、消費和結算記錄都會一起刪除，而且無法復原。`);
+ if(!ok)return;
+
+ state.bills=state.bills.filter(x=>x.id!==b.id);
+ state.current=state.bills[0]?.id||null;
+ save();
+ closeModal('billMenuModal');
+ renderAll();
+ go('bills');
+}
+
 
 function openPeople(){if(!current())return;renderPeopleEditor();document.getElementById('peopleModal').classList.add('open')}
 function addPerson(){
