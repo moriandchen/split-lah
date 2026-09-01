@@ -26,7 +26,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
 .preview{background:var(--warm);padding:14px;border-radius:16px;line-height:1.7}.settle{padding:15px;border:1px dashed #cfc6b1;background:#fffaf0;border-radius:17px}.settle b{font-size:18px}.settle.paid{border-style:solid;background:#eef3ed;color:#657166}.settle-main{display:flex;justify-content:space-between;gap:12px;align-items:center}.settle-action{margin-top:11px;display:flex;justify-content:flex-end}.paid-mark{font-size:11px;padding:5px 8px;border-radius:999px;background:#dfeadf;color:#536f5b;font-weight:700}.settle-summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px;padding:14px 15px;background:var(--paper);border:1px solid var(--line);border-radius:17px}.archive-note{margin-top:12px;padding:13px 14px;border-radius:16px;background:#e8efe9;color:#536f5b;font-size:12px;line-height:1.6}.empty{text-align:center;color:var(--muted);padding:28px 10px}
 .nav{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:min(870px,calc(100% - 20px));display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px;background:rgba(247,244,237,.95);backdrop-filter:blur(15px);border:1px solid var(--line);border-radius:20px;z-index:20}.nav button{border:0;background:transparent;padding:9px 4px;border-radius:14px;color:#777269}.nav button.on{background:#3f413c;color:#fff}
 .modal{position:fixed;inset:0;background:rgba(30,30,27,.25);display:none;place-items:end center;z-index:50}.modal.open{display:grid}.sheet{width:min(600px,100%);background:var(--bg);border-radius:25px 25px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
-.person-line{display:grid;grid-template-columns:1fr auto;gap:8px}.setup-people{display:grid;gap:8px}.setup-person{display:grid;grid-template-columns:1fr auto;gap:8px}.x{border:0;background:transparent;color:var(--danger);font-size:18px}
+.person-line{display:grid;grid-template-columns:1fr auto;gap:8px}.split-mode-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}.custom-split{display:grid;gap:8px}.custom-split-row{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:10px;align-items:center}.custom-split-row .name{font-weight:700;padding-left:3px}.custom-split-row .money-input{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px}.custom-split-row .currency{font-size:12px;color:var(--muted)}.setup-people{display:grid;gap:8px}.setup-person{display:grid;grid-template-columns:1fr auto;gap:8px}.x{border:0;background:transparent;color:var(--danger);font-size:18px}
 
 .install-tip{display:none;margin:0 0 14px;padding:12px 14px;border:1px solid #ded7c5;background:#fffaf0;border-radius:16px;font-size:12px;color:#6f6a60;line-height:1.6}
 .install-tip.show{display:flex;justify-content:space-between;gap:12px;align-items:center}
@@ -43,7 +43,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
   <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
   <button id="installBtn">安裝</button>
 </div>
-<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.4</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
 
 <section id="bills" class="page active">
  <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
@@ -106,6 +106,18 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
  <div class="field"><label>金額</label><input id="expAmount" type="number" min="0" step="0.01" class="input" placeholder="0.00"></div>
  <div class="field"><label>誰付款？</label><div id="payerChips" class="chips"></div></div>
  <div class="field"><label>誰有參與？</label><div id="participantChips" class="chips"></div></div>
+ <div class="field">
+   <label>怎樣分？</label>
+   <div class="chips">
+     <button id="splitEqualBtn" type="button" class="chip on" onclick="setSplitMode('equal')">平均分</button>
+     <button id="splitCustomBtn" type="button" class="chip" onclick="setSplitMode('custom')">各自金額</button>
+   </div>
+   <div class="split-mode-note">平均分適合大家一起分；各自金額適合每個人吃不同價錢。</div>
+ </div>
+ <div id="customSplitField" class="field" style="display:none">
+   <label>每個人是多少？</label>
+   <div id="customSplitList" class="custom-split"></div>
+ </div>
  <div id="expensePreview" class="preview">輸入金額後，我會先幫你算每人多少。</div>
  <button class="btn primary" id="expenseSaveBtn" onclick="saveExpense()">保存消費</button><button class="btn danger" id="expenseDeleteBtn" style="display:none" onclick="deleteEditingExpense()">刪除這筆消費</button><button class="btn" onclick="closeModal('expenseModal')">取消</button>
  </div></div></div>
@@ -113,7 +125,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
 <script>
 const KEY='splitBillMvpV1';
 let state=JSON.parse(localStorage.getItem(KEY)||'null')||{bills:[],current:null};
-let draftPayer=null,draftParticipants=new Set(),editingExpenseId=null,setupPeople=[];
+let draftPayer=null,draftParticipants=new Set(),editingExpenseId=null,setupPeople=[],draftSplitMode='equal',draftCustomShares={};
 
 // Add settlement fields when opening data created by an older version.
 function migrateState(){state.bills.forEach(b=>{if(!b.paymentStatus||typeof b.paymentStatus!=='object')b.paymentStatus={};if(typeof b.settled!=='boolean')b.settled=false;});}
@@ -248,7 +260,9 @@ function openExpense(){
  document.getElementById('expAmount').value='';
  draftPayer=b.people[0].id;
  draftParticipants=new Set(b.people.map(p=>p.id));
- renderExpenseChips();updatePreview();
+ draftSplitMode='equal';
+ draftCustomShares={};
+ renderExpenseChips();renderSplitMode();updatePreview();
  document.getElementById('expenseModal').classList.add('open');
 }
 
@@ -263,20 +277,83 @@ function editExpense(id){
  document.getElementById('expAmount').value=e.amount;
  draftPayer=e.payer;
  draftParticipants=new Set(e.participants);
- renderExpenseChips();updatePreview();
+ draftSplitMode=e.splitMode==='custom'?'custom':'equal';
+ draftCustomShares={...(e.customShares||{})};
+ renderExpenseChips();renderSplitMode();updatePreview();
  document.getElementById('expenseModal').classList.add('open');
 }
 function renderExpenseChips(){
  const b=current();
  document.getElementById('payerChips').innerHTML=b.people.map(p=>`<button class="chip ${draftPayer===p.id?'on':''}" onclick="pickPayer('${p.id}')">${esc(p.name)}</button>`).join('');
  document.getElementById('participantChips').innerHTML=b.people.map(p=>`<button class="chip ${draftParticipants.has(p.id)?'on':''}" onclick="toggleParticipant('${p.id}')">${esc(p.name)}</button>`).join('');
+ renderCustomSplitList();
 }
+
+// Switch between equal split and per-person amounts without changing the payer or participant selection.
+function setSplitMode(mode){
+ draftSplitMode=mode==='custom'?'custom':'equal';
+ renderSplitMode();
+ updatePreview();
+}
+
+// Keep the split-mode buttons and the per-person amount area in sync.
+function renderSplitMode(){
+ document.getElementById('splitEqualBtn').classList.toggle('on',draftSplitMode==='equal');
+ document.getElementById('splitCustomBtn').classList.toggle('on',draftSplitMode==='custom');
+ document.getElementById('customSplitField').style.display=draftSplitMode==='custom'?'block':'none';
+ renderCustomSplitList();
+}
+
+// Render one amount input for every selected participant in custom mode.
+function renderCustomSplitList(){
+ const b=current(),list=document.getElementById('customSplitList');
+ if(!b||!list)return;
+ const selected=b.people.filter(p=>draftParticipants.has(p.id));
+ list.innerHTML=selected.length?selected.map(p=>`
+   <div class="custom-split-row">
+     <div class="name">${esc(p.name)}</div>
+     <div class="money-input">
+       <span class="currency">${esc(b.currency||'RM')}</span>
+       <input class="input" type="number" min="0" step="0.01" inputmode="decimal"
+         value="${draftCustomShares[p.id] ?? ''}"
+         placeholder="0.00"
+         oninput="updateCustomShare('${p.id}',this.value)">
+     </div>
+   </div>`).join(''):'<div class="note">先選至少一位參與者。</div>';
+}
+
+// Store one participant's custom share while the expense sheet is open.
+function updateCustomShare(id,value){
+ const n=Number(value);
+ if(value===''||!Number.isFinite(n)) delete draftCustomShares[id];
+ else draftCustomShares[id]=Math.max(0,n);
+ updatePreview();
+}
+
 function pickPayer(id){draftPayer=id;renderExpenseChips();updatePreview()}
-function toggleParticipant(id){draftParticipants.has(id)?draftParticipants.delete(id):draftParticipants.add(id);renderExpenseChips();updatePreview()}
+function toggleParticipant(id){
+ draftParticipants.has(id)?draftParticipants.delete(id):draftParticipants.add(id);
+ Object.keys(draftCustomShares).forEach(id=>{if(!draftParticipants.has(id))delete draftCustomShares[id]});
+ renderExpenseChips();
+ updatePreview();
+}
 document.getElementById('expAmount').addEventListener('input',updatePreview);
+
 function updatePreview(){
  const b=current(),a=Number(document.getElementById('expAmount').value||0),n=draftParticipants.size;
- document.getElementById('expensePreview').innerHTML=n&&a?`${money(a,b)} ÷ ${n} 人 = <b>每人 ${money(a/n,b)}</b>`:'選好參與者並輸入金額，我會先算給你看。';
+ const preview=document.getElementById('expensePreview');
+
+ if(draftSplitMode==='custom'){
+   const selected=[...draftParticipants];
+   const total=selected.reduce((sum,id)=>sum+Number(draftCustomShares[id]||0),0);
+   const diff=a-total;
+   if(!n)return preview.innerHTML='先選至少一位參與者。';
+   if(!(a>0))return preview.innerHTML=`各自金額目前合計 <b>${money(total,b)}</b>。再輸入這筆消費的總金額。`;
+   if(Math.abs(diff)<0.005)return preview.innerHTML=`各自金額合計 <b>${money(total,b)}</b>，和總金額一致 ✓`;
+   return preview.innerHTML=`各自金額合計 <b>${money(total,b)}</b>；和總金額還差 <b>${money(Math.abs(diff),b)}</b>${diff>0?'。':'（目前超過總金額）。'}`;
+ }
+
+ preview.innerHTML=n&&a?`${money(a,b)} ÷ ${n} 人 = <b>每人 ${money(a/n,b)}</b>`:'選好參與者並輸入金額，我會先算給你看。';
 }
 // Save a new expense or update the expense currently being edited.
 function saveExpense(){
@@ -284,11 +361,33 @@ function saveExpense(){
  if(!(amount>0))return alert('金額要大於 0。');
  if(!draftPayer)return alert('請選付款人。');
  if(!draftParticipants.size)return alert('至少要有一位參與者。');
+
+ let customShares=null;
+ if(draftSplitMode==='custom'){
+   customShares={};
+   for(const id of draftParticipants){
+     const share=Number(draftCustomShares[id]);
+     if(!(share>=0))return alert('每位參與者都要填自己的金額。');
+     customShares[id]=share;
+   }
+   const customTotal=Object.values(customShares).reduce((sum,n)=>sum+n,0);
+   if(Math.abs(customTotal-amount)>=0.005)return alert(`各自金額加起來要等於總金額。\n目前：${money(customTotal,b)}\n總金額：${money(amount,b)}`);
+ }
+
+ const payload={
+   title,
+   amount,
+   payer:draftPayer,
+   participants:[...draftParticipants],
+   splitMode:draftSplitMode,
+   customShares
+ };
+
  if(editingExpenseId){
    const e=b.expenses.find(x=>x.id===editingExpenseId);
-   if(e){e.title=title;e.amount=amount;e.payer=draftPayer;e.participants=[...draftParticipants];e.updatedAt=Date.now();}
+   if(e)Object.assign(e,payload,{updatedAt:Date.now()});
  }else{
-   b.expenses.unshift({id:uid(),title,amount,payer:draftPayer,participants:[...draftParticipants],createdAt:Date.now()});
+   b.expenses.unshift({id:uid(),...payload,createdAt:Date.now()});
  }
  b.paymentStatus={};b.settled=false;save();editingExpenseId=null;closeModal('expenseModal');renderAll();go('bill');
 }
@@ -304,7 +403,17 @@ function deleteEditingExpense(){
 
 function calc(b){
  const bal=Object.fromEntries(b.people.map(p=>[p.id,0]));
- for(const e of b.expenses){if(!(e.payer in bal)||!e.participants.length)continue;bal[e.payer]+=e.amount;const share=e.amount/e.participants.length;e.participants.forEach(id=>{if(id in bal)bal[id]-=share})}
+ for(const e of b.expenses){
+   if(!(e.payer in bal)||!e.participants.length)continue;
+   bal[e.payer]+=e.amount;
+
+   if(e.splitMode==='custom'&&e.customShares&&typeof e.customShares==='object'){
+     e.participants.forEach(id=>{if(id in bal)bal[id]-=Number(e.customShares[id]||0)});
+   }else{
+     const share=e.amount/e.participants.length;
+     e.participants.forEach(id=>{if(id in bal)bal[id]-=share});
+   }
+ }
  const creditors=Object.entries(bal).filter(([,v])=>v>.005).map(([id,v])=>({id,v})).sort((a,z)=>z.v-a.v);
  const debtors=Object.entries(bal).filter(([,v])=>v<-.005).map(([id,v])=>({id,v:-v})).sort((a,z)=>z.v-a.v);
  const tx=[];let i=0,j=0;
@@ -338,7 +447,7 @@ function renderBill(){
  const total=b.expenses.reduce((s,e)=>s+e.amount,0);
  document.getElementById('billHero').innerHTML=`<div class="muted">目前帳單</div><h1>${esc(b.title)}</h1><div class="stats"><div class="stat"><small>總支出</small><b>${money(total,b)}</b></div><div class="stat"><small>參與者</small><b>${b.people.length} 人</b></div><div class="stat"><small>消費</small><b>${b.expenses.length} 筆</b></div></div>`;
  document.getElementById('peopleView').innerHTML=b.people.length?b.people.map(p=>`<span class="chip on">${esc(p.name)}</span>`).join(''):'<span class="note">還沒有人</span>';
- document.getElementById('expenseList').innerHTML=b.expenses.length?b.expenses.map(e=>`<div class="row expense-row" onclick="editExpense('${e.id}')"><div><b>${esc(e.title)}</b><small>${esc(nameOf(b,e.payer))} 付款 · ${e.participants.map(id=>esc(nameOf(b,id))).join(' / ')}</small></div><div style="text-align:right"><div class="amount">${money(e.amount,b)}</div><small>點擊編輯 ›</small></div></div>`).join(''):'<div class="empty">還沒有消費。<br>加第一筆就開始了。</div>';
+ document.getElementById('expenseList').innerHTML=b.expenses.length?b.expenses.map(e=>`<div class="row expense-row" onclick="editExpense('${e.id}')"><div><b>${esc(e.title)}</b><small>${esc(nameOf(b,e.payer))} 付款 · ${e.participants.map(id=>esc(nameOf(b,id))).join(' / ')}</small><small>${e.splitMode==='custom'?'各自金額':'平均分'}</small></div><div style="text-align:right"><div class="amount">${money(e.amount,b)}</div><small>點擊編輯 ›</small></div></div>`).join(''):'<div class="empty">還沒有消費。<br>加第一筆就開始了。</div>';
 }
 // Render settlement transfers, payment progress, and final balances.
 function renderSettlement(){
@@ -361,7 +470,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;',
 if(!state.bills.length){
  const p1={id:uid(),name:'Chen'},p2={id:uid(),name:'寶寶'},p3={id:uid(),name:'A'};
  const demo={id:uid(),title:'示範 · 晚餐',currency:'RM',people:[p1,p2,p3],expenses:[],paymentStatus:{},settled:false,createdAt:Date.now()};
- demo.expenses=[{id:uid(),title:'晚餐',amount:180,payer:p1.id,participants:[p1.id,p2.id,p3.id],createdAt:Date.now()}];
+ demo.expenses=[{id:uid(),title:'晚餐',amount:180,payer:p1.id,participants:[p1.id,p2.id,p3.id],splitMode:'equal',customShares:null,createdAt:Date.now()}];
  state.bills=[demo];state.current=demo.id;save();
 }
 renderAll();
