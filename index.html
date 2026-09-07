@@ -43,7 +43,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
   <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
   <button id="installBtn">安裝</button>
 </div>
-<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5.1</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
 
 <section id="bills" class="page active">
  <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
@@ -124,6 +124,9 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
 
 <script>
 const KEY='splitBillMvpV1';
+// Remember whether this device already had a saved Split Lah! state before this launch.
+// This lets the demo appear only on the true first launch, not after the user deletes all bills.
+const HAD_SAVED_STATE=localStorage.getItem(KEY)!==null;
 let state=JSON.parse(localStorage.getItem(KEY)||'null')||{bills:[],current:null};
 let draftPayer=null,draftParticipants=new Set(),editingExpenseId=null,setupPeople=[],draftSplitMode='equal',draftCustomShares={};
 
@@ -466,9 +469,10 @@ function renderHistory(){document.getElementById('historyList').innerHTML=state.
 function renderAll(){renderBills();if(current())renderBill();renderHistory()}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
-// Seed a useful first-run demo so the app is immediately understandable.
-if(!state.bills.length){
- const p1={id:uid(),name:'Chen'},p2={id:uid(),name:'寶寶'},p3={id:uid(),name:'A'};
+// Seed the demo only on the true first launch.
+// If the user later deletes every bill, an intentionally empty saved state must stay empty.
+if(!HAD_SAVED_STATE && !state.bills.length){
+ const p1={id:uid(),name:'CEO'},p2={id:uid(),name:'寶寶'},p3={id:uid(),name:'A'};
  const demo={id:uid(),title:'示範 · 晚餐',currency:'RM',people:[p1,p2,p3],expenses:[],paymentStatus:{},settled:false,createdAt:Date.now()};
  demo.expenses=[{id:uid(),title:'晚餐',amount:180,payer:p1.id,participants:[p1.id,p2.id,p3.id],splitMode:'equal',customShares:null,createdAt:Date.now()}];
  state.bills=[demo];state.current=demo.id;save();
