@@ -12,7 +12,6 @@
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
-<link rel="manifest" href="manifest.json">
 <title>Split Lah!</title>
 <style>
 :root{--bg:#f7f4ed;--paper:#fffdf8;--ink:#2d302d;--muted:#8b8d86;--line:#e5dfd2;--accent:#536f5b;--soft:#e8efe9;--warm:#f1eadc;--danger:#a65d54;--shadow:0 14px 40px rgba(61,58,49,.07)}
@@ -43,7 +42,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
   <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
   <button id="installBtn">安裝</button>
 </div>
-<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5.1</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5.2</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
 
 <section id="bills" class="page active">
  <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
@@ -405,22 +404,42 @@ function deleteEditingExpense(){
 }
 
 function calc(b){
- const bal=Object.fromEntries(b.people.map(p=>[p.id,0]));
+ // Keep all accounting in integer cents so the balances and transfers always add up.
+ const cents=Object.fromEntries(b.people.map(p=>[p.id,0]));
+ let remainderCursor=0;
  for(const e of b.expenses){
-   if(!(e.payer in bal)||!e.participants.length)continue;
-   bal[e.payer]+=e.amount;
+   if(!(e.payer in cents))continue;
+   const ids=[...new Set((e.participants||[]).filter(id=>id in cents))];
+   if(!ids.length)continue;
+   const amountCents=Math.round(Number(e.amount||0)*100);
+   cents[e.payer]+=amountCents;
 
    if(e.splitMode==='custom'&&e.customShares&&typeof e.customShares==='object'){
-     e.participants.forEach(id=>{if(id in bal)bal[id]-=Number(e.customShares[id]||0)});
+     const raw=ids.map(id=>Math.max(0,Number(e.customShares[id]||0))*100);
+     const shares=raw.map(Math.floor);
+     let remainder=amountCents-shares.reduce((sum,n)=>sum+n,0);
+     const order=raw.map((value,index)=>({index,fraction:value-shares[index]}));
+     order.sort((a,z)=>remainder>0?z.fraction-a.fraction:a.fraction-z.fraction);
+     for(let k=0;remainder!==0&&k<order.length;k++){
+       const index=order[k].index;
+       if(remainder>0){shares[index]++;remainder--;}
+       else if(shares[index]>0){shares[index]--;remainder++;}
+     }
+     ids.forEach((id,index)=>{cents[id]-=shares[index]||0});
    }else{
-     const share=e.amount/e.participants.length;
-     e.participants.forEach(id=>{if(id in bal)bal[id]-=share});
+     const base=Math.floor(amountCents/ids.length);
+     const remainder=amountCents-base*ids.length;
+     ids.forEach(id=>{cents[id]-=base});
+     const start=remainderCursor%ids.length;
+     for(let k=0;k<remainder;k++)cents[ids[(start+k)%ids.length]]--;
+     remainderCursor=(start+remainder)%ids.length;
    }
  }
- const creditors=Object.entries(bal).filter(([,v])=>v>.005).map(([id,v])=>({id,v})).sort((a,z)=>z.v-a.v);
- const debtors=Object.entries(bal).filter(([,v])=>v<-.005).map(([id,v])=>({id,v:-v})).sort((a,z)=>z.v-a.v);
+ const bal=Object.fromEntries(Object.entries(cents).map(([id,value])=>[id,value/100]));
+ const creditors=Object.entries(cents).filter(([,v])=>v>0).map(([id,v])=>({id,v})).sort((a,z)=>z.v-a.v);
+ const debtors=Object.entries(cents).filter(([,v])=>v<0).map(([id,v])=>({id,v:-v})).sort((a,z)=>z.v-a.v);
  const tx=[];let i=0,j=0;
- while(i<debtors.length&&j<creditors.length){const a=Math.min(debtors[i].v,creditors[j].v);tx.push({from:debtors[i].id,to:creditors[j].id,amount:a});debtors[i].v-=a;creditors[j].v-=a;if(debtors[i].v<.005)i++;if(creditors[j].v<.005)j++}
+ while(i<debtors.length&&j<creditors.length){const amount=Math.min(debtors[i].v,creditors[j].v);tx.push({from:debtors[i].id,to:creditors[j].id,amount:amount/100});debtors[i].v-=amount;creditors[j].v-=amount;if(debtors[i].v===0)i++;if(creditors[j].v===0)j++}
  return {bal,tx};
 }
 // Build a stable key for one calculated settlement transfer.
