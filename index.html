@@ -42,7 +42,7 @@ button,input,select{font:inherit}.app{max-width:900px;margin:auto;padding:18px 1
   <span id="installText">可以把 Split Lah! 加到手機主畫面，之後會像獨立 App 一樣開啟。</span>
   <button id="installBtn">安裝</button>
 </div>
-<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5.2</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
+<div class="top"><div class="brand">Split Lah!<small>你記帳，我算數。 · PWA v1.5.3</small></div><button class="btn" onclick="openNewBill()">＋ 新分帳</button></div>
 
 <section id="bills" class="page active">
  <div class="hero"><div class="muted">Split Lah!</div><h1>不要再自己算了 😂</h1><div class="note">建立一個帳單，加入人物和消費；最後直接看誰要轉多少給誰。</div></div>
@@ -404,19 +404,19 @@ function deleteEditingExpense(){
 }
 
 function calc(b){
- // Keep all accounting in integer cents so the balances and transfers always add up.
- const cents=Object.fromEntries(b.people.map(p=>[p.id,0]));
+ // Keep amounts in cents, track each debtor-creditor pair, then offset only mutual debts.
+ const debts=Object.fromEntries(b.people.map(p=>[p.id,Object.fromEntries(b.people.map(q=>[q.id,0]))]));
  let remainderCursor=0;
  for(const e of b.expenses){
-   if(!(e.payer in cents))continue;
-   const ids=[...new Set((e.participants||[]).filter(id=>id in cents))];
+   if(!(e.payer in debts))continue;
+   const ids=[...new Set((e.participants||[]).filter(id=>id in debts))];
    if(!ids.length)continue;
    const amountCents=Math.round(Number(e.amount||0)*100);
-   cents[e.payer]+=amountCents;
+   let shares;
 
    if(e.splitMode==='custom'&&e.customShares&&typeof e.customShares==='object'){
      const raw=ids.map(id=>Math.max(0,Number(e.customShares[id]||0))*100);
-     const shares=raw.map(Math.floor);
+     shares=raw.map(Math.floor);
      let remainder=amountCents-shares.reduce((sum,n)=>sum+n,0);
      const order=raw.map((value,index)=>({index,fraction:value-shares[index]}));
      order.sort((a,z)=>remainder>0?z.fraction-a.fraction:a.fraction-z.fraction);
@@ -425,21 +425,34 @@ function calc(b){
        if(remainder>0){shares[index]++;remainder--;}
        else if(shares[index]>0){shares[index]--;remainder++;}
      }
-     ids.forEach((id,index)=>{cents[id]-=shares[index]||0});
    }else{
      const base=Math.floor(amountCents/ids.length);
      const remainder=amountCents-base*ids.length;
-     ids.forEach(id=>{cents[id]-=base});
+     shares=ids.map(()=>base);
      const start=remainderCursor%ids.length;
-     for(let k=0;k<remainder;k++)cents[ids[(start+k)%ids.length]]--;
+     for(let k=0;k<remainder;k++)shares[(start+k)%ids.length]++;
      remainderCursor=(start+remainder)%ids.length;
    }
+
+   ids.forEach((id,index)=>{
+     const share=shares[index]||0;
+     if(id!==e.payer&&share>0)debts[id][e.payer]+=share;
+   });
  }
+
+ // Cancel only opposite debts between the same two people. Keep other payees separate.
+ for(let i=0;i<b.people.length;i++)for(let j=i+1;j<b.people.length;j++){
+   const a=b.people[i].id,z=b.people[j].id;
+   const offset=Math.min(debts[a][z],debts[z][a]);
+   debts[a][z]-=offset;debts[z][a]-=offset;
+ }
+
+ const rows=Object.entries(debts).map(([from,targets])=>({from,total:Object.values(targets).reduce((sum,n)=>sum+n,0)})).filter(x=>x.total>0).sort((a,z)=>z.total-a.total);
+ const tx=[];
+ rows.forEach(row=>Object.entries(debts[row.from]).filter(([,amount])=>amount>0).sort((a,z)=>a[1]-z[1]).forEach(([to,amount])=>tx.push({from:row.from,to,amount:amount/100})));
+ const cents=Object.fromEntries(b.people.map(p=>[p.id,0]));
+ tx.forEach(t=>{const amount=Math.round(t.amount*100);cents[t.to]+=amount;cents[t.from]-=amount});
  const bal=Object.fromEntries(Object.entries(cents).map(([id,value])=>[id,value/100]));
- const creditors=Object.entries(cents).filter(([,v])=>v>0).map(([id,v])=>({id,v})).sort((a,z)=>z.v-a.v);
- const debtors=Object.entries(cents).filter(([,v])=>v<0).map(([id,v])=>({id,v:-v})).sort((a,z)=>z.v-a.v);
- const tx=[];let i=0,j=0;
- while(i<debtors.length&&j<creditors.length){const amount=Math.min(debtors[i].v,creditors[j].v);tx.push({from:debtors[i].id,to:creditors[j].id,amount:amount/100});debtors[i].v-=amount;creditors[j].v-=amount;if(debtors[i].v===0)i++;if(creditors[j].v===0)j++}
  return {bal,tx};
 }
 // Build a stable key for one calculated settlement transfer.
